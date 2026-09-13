@@ -1,0 +1,196 @@
+---------------------------
+Plataforma móvel horizontal
+---------------------------
+
+import Phaser from 'phaser';
+
+const config = {
+    type: Phaser.AUTO,
+
+    width: 800,
+    height: 600,
+
+    backgroundColor: '#202040',
+
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: {
+                y: 700
+            },
+            debug: false
+        }
+    },
+
+    scene: {
+        create,
+        update
+    }
+};
+
+let jogador;
+let plataformas;
+let plataformaMovel;
+let teclas;
+let direcaoDaPlataforma = 1;
+
+const velocidade = 220;
+const forcaDoPulo = 450;
+const velocidadeDaPlataforma = 100;
+
+function create() {
+    const largura = 800;
+    const altura = 600;
+
+    // Fundo
+    this.add.rectangle(
+        largura / 2,
+        altura / 2,
+        largura,
+        altura,
+        0x303050
+    );
+
+    // Grupo de plataformas físicas estáticas
+    plataformas = this.physics.add.staticGroup();
+
+    // Chão
+    criarPlataforma(this, 400, 570, 800, 60);
+
+    // Plataformas superiores
+    criarPlataforma(this, 180, 450, 220, 25);
+    criarPlataforma(this, 600, 350, 220, 25);
+    criarPlataforma(this, 300, 250, 180, 25);
+    criarPlataforma(this, 650, 170, 180, 25);
+
+   plataformaMovel = this.add.rectangle(
+    400,
+    480,
+    180,
+    25,
+    0xffaa00
+);
+
+this.physics.add.existing(plataformaMovel);
+
+plataformaMovel.body.setAllowGravity(false);
+plataformaMovel.body.setImmovable(true);
+
+
+
+
+    // Jogador
+    jogador = this.add.rectangle(
+        100,
+        500,
+        30,
+        30,
+        0x00aaff
+    );
+
+    // Adiciona física ao jogador
+    this.physics.add.existing(jogador);
+
+    // Colisão com as plataformas
+    this.physics.add.collider(jogador, plataformas);
+
+    // Colisão com o jogador
+this.physics.add.collider(jogador, plataformaMovel);
+
+    // Teclas
+    teclas = this.input.keyboard.addKeys({
+        esquerda: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        direita: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        pulo: Phaser.Input.Keyboard.KeyCodes.SPACE
+    });
+
+    // Texto
+    this.add.text(
+        20,
+        20,
+        'Setas: movimentar   Espaço: pular',
+        {
+            fontSize: '20px',
+            color: '#ffffff'
+        }
+    );
+}
+
+function update() {
+    // Movimento horizontal do jogador
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    // Verifica se o jogador está apoiado
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    // Pulo
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Movimento da plataforma móvel
+    plataformaMovel.body.setVelocityX(
+        velocidadeDaPlataforma * direcaoDaPlataforma
+    );
+
+    // Limite direito
+    if (plataformaMovel.x >= 700) {
+        plataformaMovel.x = 700;
+        direcaoDaPlataforma = -1;
+    }
+
+    // Limite esquerdo
+    if (plataformaMovel.x <= 100) {
+        plataformaMovel.x = 100;
+        direcaoDaPlataforma = 1;
+    }
+
+    // Teletransporte horizontal do jogador
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+
+    // Reinicia se cair pela parte inferior
+    if (jogador.y > 630) {
+        jogador.x = 100;
+        jogador.y = 100;
+        jogador.body.setVelocity(0);
+    }
+}
+
+function criarPlataforma(scene, x, y, largura, altura) {
+    const plataforma = scene.add.rectangle(
+        x,
+        y,
+        largura,
+        altura,
+        0x8844aa
+    );
+
+    plataforma.setStrokeStyle(3, 0xffffff);
+
+    // Corpo físico estático
+    scene.physics.add.existing(plataforma, true);
+
+    // Adiciona ao grupo
+    plataformas.add(plataforma);
+}
+
+new Phaser.Game(config);

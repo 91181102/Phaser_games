@@ -1,0 +1,982 @@
+Vamos transformar os granizos em inimigos que atravessam tudo, caindo do alto e reaparecendo no céu. A cada rodada, aumentamos a quantidade até 20 e também a velocidade até um limite.
+
+A lógica será:
+
+Granizos começam no alto.
+
+Caem até o chão.
+
+Ao chegar ao chão, reaparecem em uma posição horizontal aleatória no céu.
+
+A cada nova rodada, aumenta a quantidade de granizos.
+
+A velocidade também aumenta, mas para em um limite.
+
+Ao tocar no jogador:
+
+tudo pausa;
+
+aparece “Você foi atingido!”;
+
+depois o jogo reinicia.
+
+1. Novas variáveis
+
+Adicione junto das outras variáveis globais:
+
+let granizos;
+
+let quantidadeDeGranizos = 1;
+const quantidadeMaximaDeGranizos = 20;
+
+let velocidadeDosGranizos = 120;
+const velocidadeMaximaDosGranizos = 320;
+
+let jogoEncerrado = false;
+let textoGameOver;
+2. Criar os granizos
+
+Na função create(scene), adicione:
+
+criarGranizos(this);
+
+Por exemplo, junto das outras chamadas:
+
+criarPlataformas(this);
+criarJogador(this);
+criarObjetosColetaveis(this);
+criarBonus(this);
+criarGranizos(this);
+
+Agora crie esta função:
+
+function criarGranizos(scene) {
+    granizos = scene.physics.add.group();
+
+    for (let i = 0; i < quantidadeDeGranizos; i++) {
+        criarGranizo(scene);
+    }
+
+    scene.physics.add.overlap(
+        jogador,
+        granizos,
+        jogadorAtingido,
+        null,
+        scene
+    );
+}
+3. Criar um granizo
+
+O granizo será um pequeno círculo branco-azulado. Ele terá física própria, mas não será afetado pela gravidade. Assim controlamos a velocidade diretamente.
+
+function criarGranizo(scene) {
+    const x = Phaser.Math.Between(20, 780);
+    const y = Phaser.Math.Between(-300, -30);
+
+    const granizo = scene.add.circle(
+        x,
+        y,
+        7,
+        0xffffff
+    );
+
+    granizo.setStrokeStyle(2, 0x99ccff);
+
+    scene.physics.add.existing(granizo);
+
+    granizo.body.setAllowGravity(false);
+    granizo.body.setVelocityY(velocidadeDosGranizos);
+
+    granizos.add(granizo);
+}
+
+A posição y negativa faz com que alguns granizos já comecem fora da tela, dando a impressão de que estão vindo do céu.
+
+4. Atualizar a queda dos granizos
+
+Adicione esta função:
+
+function updateGranizos() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    granizos.children.iterate((granizo) => {
+        if (!granizo) {
+            return;
+        }
+
+        if (granizo.y > 620) {
+            granizo.x = Phaser.Math.Between(20, 780);
+            granizo.y = Phaser.Math.Between(-100, -20);
+
+            granizo.body.setVelocityY(velocidadeDosGranizos);
+        }
+    });
+}
+
+Quando o granizo passa da altura 620, ele é reposicionado no alto.
+
+Observe que ele não verifica plataformas. Portanto, atravessará as plataformas normalmente, como você imaginou.
+
+5. Chamar no update
+
+Na função update(), adicione:
+
+updateGranizos();
+
+Ficando aproximadamente assim:
+
+function update() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    updateJogador();
+    updatePlataformaMovel();
+    updatePlataformaMovelVertical();
+    updateGranizos();
+}
+6. Quando o jogador for atingido
+
+Adicione:
+
+function jogadorAtingido() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    jogoEncerrado = true;
+
+    this.physics.pause();
+
+    this.tweens.pauseAll();
+
+    textoGameOver = this.add.text(
+        400,
+        300,
+        'Você foi atingido!',
+        {
+            fontSize: '42px',
+            color: '#ff0000',
+            fontStyle: 'bold',
+            stroke: '#ffffff',
+            strokeThickness: 5
+        }
+    );
+
+    textoGameOver.setOrigin(0.5);
+
+    this.time.delayedCall(
+        2500,
+        () => {
+            reiniciarJogo(this);
+        }
+    );
+}
+
+Aqui:
+
+this.physics.pause();
+
+para a física.
+
+E:
+
+this.tweens.pauseAll();
+
+para as animações, incluindo a pulsação do bônus e outros movimentos feitos por tween.
+
+7. Reiniciar o jogo
+
+Adicione:
+
+function reiniciarJogo(scene) {
+    pontuacao = 0;
+    quantidadeDeObjetos = 5;
+
+    quantidadeDeGranizos = 1;
+    velocidadeDosGranizos = 120;
+
+    jogoEncerrado = false;
+
+    scene.scene.restart();
+}
+
+O scene.restart() recria a cena inteira, então:
+
+o jogador volta à posição inicial;
+
+as plataformas são recriadas;
+
+os objetos coletáveis voltam;
+
+o bônus volta a funcionar;
+
+a pontuação reinicia;
+
+os granizos começam novamente.
+
+8. Aumentar os granizos a cada rodada
+
+Como você já tem a função criarNovaRodada(scene), podemos aproveitar a mesma ideia.
+
+Substitua sua função por esta versão:
+
+function criarNovaRodada(scene) {
+    for (let i = 0; i < quantidadeDeObjetos; i++) {
+        criarObjetoColetavel(scene);
+    }
+
+    if (quantidadeDeObjetos < 10) {
+        quantidadeDeObjetos++;
+    }
+
+    aumentarDificuldadeDosGranizos(scene);
+}
+
+Agora adicione:
+
+function aumentarDificuldadeDosGranizos(scene) {
+    if (quantidadeDeGranizos < quantidadeMaximaDeGranizos) {
+        quantidadeDeGranizos++;
+    }
+
+    if (velocidadeDosGranizos < velocidadeMaximaDosGranizos) {
+        velocidadeDosGranizos += 15;
+
+        if (velocidadeDosGranizos > velocidadeMaximaDosGranizos) {
+            velocidadeDosGranizos = velocidadeMaximaDosGranizos;
+        }
+    }
+
+    for (let i = granizos.countActive(true); i < quantidadeDeGranizos; i++) {
+        criarGranizo(scene);
+    }
+
+    granizos.children.iterate((granizo) => {
+        if (granizo && granizo.body) {
+            granizo.body.setVelocityY(velocidadeDosGranizos);
+        }
+    });
+}
+
+A progressão ficará aproximadamente assim:
+
+Rodada  Granizos    Velocidade
+1       1           120
+2       2           135
+3       3           150
+4       4           165
+...     ...         ...
+20      20          320
+
+Depois  20          320
+
+A quantidade para em 20 e a velocidade para em 320.
+Importante: nessa versão, a dificuldade aumenta quando todos os objetos coletáveis da rodada são recolhidos. Isso combina com a ideia de “fase” sem ainda precisarmos criar um sistema separado de fases.
+Perfeito! Isso vai dar ao jogo uma dificuldade bem mais “arcade”: os granizos funcionam como uma chuva constante, sem permitir que o jogador simplesmente fique escondido sobre uma plataforma.
+A implementação anterior já cobre a ideia principal. Eu faria apenas dois pequenos ajustes importantes.
+
+1. Impedir que o jogador continue se movendo após ser atingido
+
+Na função updateJogador(), coloque logo no início:
+
+function updateJogador() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    // restante do código atual do jogador...
+}
+
+Assim, mesmo que alguma tecla esteja pressionada, o jogador não continuará recebendo comandos durante a mensagem.
+
+2. Fazer os granizos reaparecerem também se forem destruídos
+
+Na função updateGranizos(), use esta versão:
+
+function updateGranizos() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    granizos.children.iterate((granizo) => {
+        if (!granizo || !granizo.active) {
+            return;
+        }
+
+        if (granizo.y > 620) {
+            granizo.x = Phaser.Math.Between(20, 780);
+            granizo.y = Phaser.Math.Between(-100, -20);
+
+            granizo.body.setVelocityY(
+                velocidadeDosGranizos
+            );
+        }
+    });
+}
+3. Atenção à função criarNovaRodada
+
+A função ficará assim:
+
+function criarNovaRodada(scene) {
+    for (let i = 0; i < quantidadeDeObjetos; i++) {
+        criarObjetoColetavel(scene);
+    }
+
+    if (quantidadeDeObjetos < 10) {
+        quantidadeDeObjetos++;
+    }
+
+    aumentarDificuldadeDosGranizos(scene);
+}
+
+E a função de dificuldade:
+
+function aumentarDificuldadeDosGranizos(scene) {
+    if (quantidadeDeGranizos < quantidadeMaximaDeGranizos) {
+        quantidadeDeGranizos++;
+    }
+
+    if (velocidadeDosGranizos < velocidadeMaximaDosGranizos) {
+        velocidadeDosGranizos += 15;
+
+        if (velocidadeDosGranizos > velocidadeMaximaDosGranizos) {
+            velocidadeDosGranizos = velocidadeMaximaDosGranizos;
+        }
+    }
+
+    const quantidadeAtual =
+        granizos.countActive(true);
+
+    for (
+        let i = quantidadeAtual;
+        i < quantidadeDeGranizos;
+        i++
+    ) {
+        criarGranizo(scene);
+    }
+
+    granizos.children.iterate((granizo) => {
+        if (granizo && granizo.body) {
+            granizo.body.setVelocityY(
+                velocidadeDosGranizos
+            );
+        }
+    });
+}
+Resultado esperado
+
+Primeira fase: 1 granizo.
+
+Cada rodada concluída: mais 1 granizo.
+
+Limite: 20 granizos.
+
+A velocidade começa em 120.
+
+Aumenta 15 por rodada.
+
+Limite de velocidade: 320.
+
+Granizos atravessam plataformas porque não criamos colisão entre eles e as plataformas.
+
+Ao atingir o jogador:
+
+física para;
+
+tweens param;
+
+aparece “Você foi atingido!”;
+
+após 2,5 segundos, a cena reinicia.
+
+Isso já cria uma estrutura muito boa de jogo:
+
+coletar → sobreviver à chuva → aumentar dificuldade → ser atingido ou continuar
+
+E o mais interessante é que os granizos não precisam de imagens externas: círculos pequenos com contorno azul-claro já dão um visual bastante convincente de “pedrinhas de gelo” no estilo Atari 2600.
+
+-------------------------
+código
+-------------------------
+
+import Phaser from 'phaser';
+
+const config = {
+    type: Phaser.AUTO,
+
+    width: 800,
+    height: 600,
+
+    backgroundColor: '#202040',
+
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: {
+                y: 700
+            },
+            debug: false
+        }
+    },
+
+    scene: {
+        create,
+        update
+    }
+};
+
+let jogador;
+let plataformas;
+let plataformaMovel;
+let plataformaMovelVertical;
+let teclas;
+
+let objetosColetaveis;
+let pontuacao = 0;
+let quantidadeDeObjetos = 5;
+let textoPontuacao;
+
+let bonus;
+let bonusAtivo = false;
+let tempoDoBonus = 30000;
+let duracaoDoBonus = 10000;
+
+let granizos;
+let quantidadeDeGranizos = 1;
+let velocidadeDosGranizos = 120;
+let jogoEncerrado = false;
+let textoGameOver;
+
+let direcaoPlataformaHorizontal = 1;
+let direcaoPlataformaVertical = 1;
+
+const velocidade = 240;
+const forcaDoPulo = 450;
+const velocidadeDaPlataforma = 100;
+const pontosDoBonus = 100;
+const quantidadeMaximaDeGranizos = 20;
+const velocidadeMaximaDosGranizos = 320;
+
+/*Cria os elementos do jogo */
+function create() {
+    criarPlataformas(this);
+    criarPlataformaMovelHorizontal(this);
+    criarPlataformaMovelVertical(this);
+    criarJogador(this);
+    aplicarFisica(this);
+    definirTeclas(this);
+    criarObjetosColetaveis(this);
+    criarBonus(this);
+    criarGranizos(this);
+
+    // Texto
+    this.add.text(
+        20,
+        20,
+        'Setas: movimentar   Espaço: pular',
+        {
+            fontSize: '20px',
+            color: '#ffffff'
+        }
+    );
+
+     // Texto da pontuação
+    textoPontuacao = this.add.text(
+        20,
+        50,
+        'Pontos: 0',
+        {
+            fontSize: '24px',
+            color: '#ffff00'
+        }
+    );
+}
+
+/*Cria as plataformas fixas do cenário */
+function criarPlataformas(scene) {
+    const largura = 800;
+    const altura = 600;
+
+    // Fundo
+    scene.add.rectangle(
+        largura / 2,
+        altura / 2,
+        largura,
+        altura,
+        0x303050
+    );
+
+    // Grupo de plataformas físicas estáticas
+    plataformas = scene.physics.add.staticGroup();
+
+    // Chão
+    criarPlataforma(scene, 400, 570, 800, 60);
+
+    // Plataformas superiores
+    criarPlataforma(scene, 180, 450, 220, 25);
+    criarPlataforma(scene, 600, 350, 220, 25);
+    criarPlataforma(scene, 300, 250, 180, 25);
+    criarPlataforma(scene, 650, 170, 180, 25);
+}
+
+/*Cria as plataformas móveis na horizontal do cenário */
+function criarPlataformaMovelHorizontal(scene) {    
+     plataformaMovel = scene.add.rectangle(
+        400,
+        480,
+        180,
+        25,
+        0xffaa00
+    );
+
+    scene.physics.add.existing(plataformaMovel);
+    plataformaMovel.body.setAllowGravity(false);
+    plataformaMovel.body.setImmovable(true);   
+}
+
+/*Cria as plataformas móveis na vertical do cenário */
+function criarPlataformaMovelVertical(scene) {
+    plataformaMovelVertical = scene.add.rectangle(
+        100,
+        400,
+        180,
+        25,
+        0xffaa00
+    );
+
+    scene.physics.add.existing(plataformaMovelVertical);
+    plataformaMovelVertical.body.setAllowGravity(false);
+    plataformaMovelVertical.body.setImmovable(true);
+}
+
+/*Cria o jogador do jogo */
+function criarJogador(scene) {
+// Jogador
+    jogador = scene.add.rectangle(
+        100,
+        500,
+        30,
+        30,
+        0x00aaff
+    );
+
+    // Adiciona física ao jogador
+    scene.physics.add.existing(jogador);
+}
+
+/*Aplica a física do jogo */
+function aplicarFisica(scene){
+    // Colisão com as plataformas
+    scene.physics.add.collider(jogador, plataformas);
+
+    scene.physics.add.collider(
+        jogador,
+        plataformaMovelVertical
+    );
+
+    // Colisão com o jogador
+    scene.physics.add.collider(jogador, plataformaMovel);
+}
+
+/*Define as teclas de controle do jogo */
+function definirTeclas(scene) {
+ // Teclas
+    teclas = scene.input.keyboard.addKeys({
+        esquerda: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        direita: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        pulo: Phaser.Input.Keyboard.KeyCodes.SPACE
+    });
+}
+
+/*Cria uma plataforma do cenário */
+function criarPlataforma(scene, x, y, largura, altura) {
+    const plataforma = scene.add.rectangle(
+        x,
+        y,
+        largura,
+        altura,
+        0x8844aa
+    );
+
+    plataforma.setStrokeStyle(3, 0xffffff);
+
+    // Corpo físico estático
+    scene.physics.add.existing(plataforma, true);
+
+    // Adiciona ao grupo
+    plataformas.add(plataforma);
+}
+
+/*Cria eventos para o bônus do jogo */
+function criarBonus(scene) {
+    scene.time.addEvent({
+        delay: tempoDoBonus,
+        callback: () => {
+            aparecerBonus(scene);
+        },
+        loop: true
+    });
+}
+
+function criarGranizos(scene) {
+    granizos = scene.physics.add.group();
+
+    for (let i = 0; i < quantidadeDeGranizos; i++) {
+        criarGranizo(scene);
+    }
+
+    scene.physics.add.overlap(
+        jogador,
+        granizos,
+        jogadorAtingido,
+        null,
+        scene
+    );
+}
+
+function criarGranizo(scene) {
+    const x = Phaser.Math.Between(20, 780);
+    const y = Phaser.Math.Between(-300, -30);
+
+    const granizo = scene.add.circle(
+        x,
+        y,
+        7,
+        0xffffff
+    );
+
+    granizo.setStrokeStyle(2, 0x99ccff);
+
+    scene.physics.add.existing(granizo);
+
+    granizo.body.setAllowGravity(false);
+    granizo.body.setVelocityY(velocidadeDosGranizos);
+
+    granizos.add(granizo);
+}
+
+
+/*Atualiza o estado do jogo a cada frame */
+function update() {
+    if (jogoEncerrado) {
+        return;
+    }
+    updateJogador();
+    updatePlataformaMovel();
+    updatePlataformaMovelVertical();
+    updateGranizos();
+}
+
+/*Atualiza o movimento do jogador */
+function updateJogador() {
+// Movimento horizontal do jogador
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    // Verifica se o jogador está apoiado
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    // Pulo
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Teletransporte horizontal do jogador
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+
+    // Reinicia se cair pela parte inferior
+    if (jogador.y > 630) {
+        jogador.x = 100;
+        jogador.y = 100;
+        jogador.body.setVelocity(0);
+    }
+}
+
+/*Atualiza o movimento da plataforma móvel horizontal */
+function updatePlataformaMovel() {
+    // Movimento da plataforma horizontal
+    plataformaMovel.body.setVelocityX(
+        velocidadeDaPlataforma * direcaoPlataformaHorizontal
+    );
+
+    // Limite direito
+    if (plataformaMovel.x >= 700) {
+        plataformaMovel.x = 700;
+        direcaoPlataformaHorizontal = -1;
+    }
+
+    // Limite esquerdo
+    if (plataformaMovel.x <= 100) {
+        plataformaMovel.x = 100;
+        direcaoPlataformaHorizontal = 1;
+    }
+}
+
+/*Atualiza o movimento da plataforma móvel vertical */
+function updatePlataformaMovelVertical() {
+    // Movimento vertical da plataforma
+    plataformaMovelVertical.body.setVelocityY(
+        velocidadeDaPlataforma * direcaoPlataformaVertical
+    );
+
+    // Limite inferior
+    if (plataformaMovelVertical.y >= 520) {
+        plataformaMovelVertical.y = 520;
+        direcaoPlataformaVertical = -1;
+    }
+
+    // Limite superior
+    if (plataformaMovelVertical.y <= 180) {
+        plataformaMovelVertical.y = 180;
+        direcaoPlataformaVertical = 1;
+    }
+}
+
+function updateGranizos() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    granizos.getChildren().forEach((granizo) => {
+        if (!granizo || !granizo.active) {
+            return;
+        }
+
+        if (granizo.y > 620) {
+            granizo.x = Phaser.Math.Between(20, 780);
+            granizo.y = Phaser.Math.Between(-100, -20);
+
+            granizo.body.setVelocityY(
+                velocidadeDosGranizos
+            );
+        }
+    });
+}
+
+/*Cria os objetos coletáveis do jogo */
+function criarObjetosColetaveis(scene) {
+    objetosColetaveis = scene.physics.add.staticGroup();
+
+    for (let i = 0; i < quantidadeDeObjetos; i++) {
+        criarObjetoColetavel(scene);
+    }
+
+    scene.physics.add.overlap(
+        jogador,
+        objetosColetaveis,
+        coletarObjeto,
+        null,
+        scene
+    );
+}
+
+/*Cria um objeto coletável do jogo */
+function criarObjetoColetavel(scene) {
+    const x = Phaser.Math.Between(30, 770);
+    const y = Phaser.Math.Between(80, 520);
+
+    const objeto = scene.add.circle(
+        x,
+        y,
+        12,
+        0xffff00
+    );
+
+    objeto.setStrokeStyle(2, 0xffffff);
+    scene.physics.add.existing(objeto, true);
+    objetosColetaveis.add(objeto);
+}
+
+/*Coleta um objeto do jogo */
+function coletarObjeto(jogador, objeto) {
+    objeto.destroy();
+    pontuacao += 10;
+    textoPontuacao.setText(
+        'Pontos: ' + pontuacao
+    );
+    if (objetosColetaveis.countActive(true) === 0) {
+        criarNovaRodada(this);
+    }
+}
+
+/*Cria uma nova rodada do jogo */
+function criarNovaRodada(scene) {
+    for (let i = 0; i < quantidadeDeObjetos; i++) {
+        criarObjetoColetavel(scene);
+    }
+
+    if (quantidadeDeObjetos < 10) {
+        quantidadeDeObjetos++;
+    }
+    aumentarDificuldadeDosGranizos(scene);
+}
+
+/*Cria o bônus do jogo */
+function aparecerBonus(scene) {
+    if (bonusAtivo) {
+        return;
+    }
+
+    bonus = scene.add.triangle(
+        400,
+        110,
+        0,
+        30,
+        30,
+        30,
+        15,
+        0,
+        0xff0000
+    );
+
+    bonus.setStrokeStyle(3, 0xffffff);
+    scene.physics.add.existing(bonus, true);
+    bonusAtivo = true;
+
+    scene.physics.add.overlap(
+        jogador,
+        bonus,
+        coletarBonus,
+        null,
+        scene
+    );
+
+    scene.time.delayedCall(
+        duracaoDoBonus,
+        () => {
+            removerBonus();
+        }
+    );
+
+    scene.tweens.add({
+        targets: bonus,
+        scaleX: 1.2,
+        scaleY: 1.2,
+        duration: 300,
+        yoyo: true,
+        repeat: -1
+    });
+}
+
+/*Coleta o bônus do jogo */
+function coletarBonus(jogador, bonusColetado) {
+    pontuacao += pontosDoBonus;
+
+    textoPontuacao.setText(
+        'Pontos: ' + pontuacao
+    );
+
+    removerBonus();
+}
+
+/*Remove o bônus do jogo */
+function removerBonus() {
+    if (bonus && bonus.active) {
+        bonus.destroy();
+    }
+
+    bonus = null;
+    bonusAtivo = false;
+}
+
+function jogadorAtingido() {
+    if (jogoEncerrado) {
+        return;
+    }
+
+    jogoEncerrado = true;
+
+    this.physics.pause();
+
+    this.tweens.pauseAll();
+
+    textoGameOver = this.add.text(
+        400,
+        300,
+        'Você foi atingido!',
+        {
+            fontSize: '42px',
+            color: '#ff0000',
+            fontStyle: 'bold',
+            stroke: '#ffffff',
+            strokeThickness: 5
+        }
+    );
+
+    textoGameOver.setOrigin(0.5);
+
+    this.time.delayedCall(
+        2500,
+        () => {
+            reiniciarJogo(this);
+        }
+    );
+}
+
+function reiniciarJogo(scene) {
+    pontuacao = 0;
+    quantidadeDeObjetos = 5;
+
+    quantidadeDeGranizos = 1;
+    velocidadeDosGranizos = 120;
+
+    jogoEncerrado = false;
+
+    scene.scene.restart();
+}
+
+function aumentarDificuldadeDosGranizos(scene) {
+    if (quantidadeDeGranizos < quantidadeMaximaDeGranizos) {
+        quantidadeDeGranizos++;
+    }
+
+    if (velocidadeDosGranizos < velocidadeMaximaDosGranizos) {
+        velocidadeDosGranizos += 15;
+
+        if (velocidadeDosGranizos > velocidadeMaximaDosGranizos) {
+            velocidadeDosGranizos = velocidadeMaximaDosGranizos;
+        }
+    }
+
+    const quantidadeAtual =
+        granizos.countActive(true);
+
+    for (
+        let i = quantidadeAtual;
+        i < quantidadeDeGranizos;
+        i++
+    ) {
+        criarGranizo(scene);
+    }
+
+    granizos.getChildren().forEach((granizo) => {
+        if (granizo && granizo.body) {
+            granizo.body.setVelocityY(
+                velocidadeDosGranizos
+            );
+        }
+    });
+}
+
+new Phaser.Game(config);

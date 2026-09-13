@@ -1,0 +1,219 @@
+-----------------------------------
+Plataforma móvel na vertical
+-----------------------------------
+
+Vamos fazer um novo exemplo com plataforma móvel vertical.
+
+A ideia será:
+
+A plataforma sobe e desce.
+
+O personagem pode andar normalmente.
+
+Quando estiver apoiado sobre ela, acompanhará o movimento vertical.
+
+Quando sair da plataforma, deixará de acompanhá-la.
+
+A plataforma não terá gravidade.
+
+1. Variáveis
+
+No início do arquivo, junto das outras variáveis, coloque:
+
+let plataformaMovelVertical;
+
+const velocidadeDaPlataforma = 100;
+let direcaoDaPlataforma = 1;
+2. Crie a plataforma na função create()
+
+Adicione dentro de create():
+
+plataformaMovelVertical = this.add.rectangle(
+    400,
+    400,
+    180,
+    25,
+    0xffaa00
+);
+
+this.physics.add.existing(plataformaMovelVertical);
+
+plataformaMovelVertical.body.setAllowGravity(false);
+plataformaMovelVertical.body.setImmovable(true);
+
+this.physics.add.collider(
+    jogador,
+    plataformaMovelVertical
+);
+
+Aqui:
+
+400, 400
+
+é a posição inicial da plataforma.
+
+E:
+
+180, 25
+
+é a largura e a altura.
+
+3. Movimento vertical da plataforma
+
+No update(), adicione:
+
+// Movimento vertical da plataforma
+plataformaMovelVertical.body.setVelocityY(
+    velocidadeDaPlataforma * direcaoDaPlataforma
+);
+
+// Limite inferior
+if (plataformaMovelVertical.y >= 520) {
+    plataformaMovelVertical.y = 520;
+    direcaoDaPlataforma = -1;
+}
+
+// Limite superior
+if (plataformaMovelVertical.y <= 180) {
+    plataformaMovelVertical.y = 180;
+    direcaoDaPlataforma = 1;
+}
+
+A plataforma ficará se movimentando entre:
+
+y = 180
+
+e:
+
+y = 520
+4. Fazer o personagem acompanhar
+
+Como estamos usando uma plataforma dinâmica e imóvel, o Phaser pode transportar o jogador durante a colisão. Mas, para garantir o comportamento, podemos detectar quando ele está sobre a plataforma e aplicar o deslocamento vertical manualmente.
+
+Primeiro, antes do movimento da plataforma, guarde a posição anterior:
+
+const yAnteriorDaPlataforma =
+    plataformaMovelVertical.y;
+
+Depois de mover a plataforma e aplicar os limites, calcule quanto ela se deslocou:
+
+const deslocamentoVertical =
+    plataformaMovelVertical.y -
+    yAnteriorDaPlataforma;
+
+Agora verifique se o personagem está sobre ela:
+
+const jogadorEstaSobreAPlataforma =
+    jogador.body.touching.down &&
+    jogador.y < plataformaMovelVertical.y &&
+    Math.abs(jogador.x - plataformaMovelVertical.x) <
+        (plataformaMovelVertical.width + jogador.width) / 2;
+
+Se estiver, acompanhe o movimento:
+
+if (jogadorEstaSobreAPlataforma) {
+    jogador.y += deslocamentoVertical;
+}
+update() completo
+
+A estrutura ficará assim:
+
+function update() {
+    // Movimento horizontal do jogador
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    // Verifica se o jogador está apoiado
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    // Pulo
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Guarda a posição anterior da plataforma
+    const yAnteriorDaPlataforma =
+        plataformaMovelVertical.y;
+
+    // Movimento vertical da plataforma
+    plataformaMovelVertical.body.setVelocityY(
+        velocidadeDaPlataforma * direcaoDaPlataforma
+    );
+
+    // Limite inferior
+    if (plataformaMovelVertical.y >= 520) {
+        plataformaMovelVertical.y = 520;
+        direcaoDaPlataforma = -1;
+    }
+
+    // Limite superior
+    if (plataformaMovelVertical.y <= 180) {
+        plataformaMovelVertical.y = 180;
+        direcaoDaPlataforma = 1;
+    }
+
+    // Calcula o deslocamento da plataforma
+    const deslocamentoVertical =
+        plataformaMovelVertical.y -
+        yAnteriorDaPlataforma;
+
+    // Verifica se o jogador está sobre a plataforma
+    const jogadorEstaSobreAPlataforma =
+        jogador.body.touching.down &&
+        jogador.y < plataformaMovelVertical.y &&
+        Math.abs(jogador.x - plataformaMovelVertical.x) <
+            (plataformaMovelVertical.width + jogador.width) / 2;
+
+    // Faz o jogador acompanhar a plataforma
+    if (jogadorEstaSobreAPlataforma) {
+        jogador.y += deslocamentoVertical;
+    }
+
+    // Teletransporte horizontal do jogador
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+
+    // Reinicia se cair
+    if (jogador.y > 630) {
+        jogador.x = 100;
+        jogador.y = 100;
+        jogador.body.setVelocity(0);
+    }
+}
+Observação importante
+
+Como a plataforma usa:
+
+setVelocityY()
+
+e também movemos o personagem manualmente, pode haver um pequeno efeito duplicado dependendo da colisão. Se isso acontecer, retire temporariamente:
+
+if (jogadorEstaSobreAPlataforma) {
+    jogador.y += deslocamentoVertical;
+}
+
+e teste apenas com a física do Phaser.
+
+Para um primeiro teste, recomendo colocar a plataforma vertical em:
+
+x = 400
+y = 400
+
+e deixar as plataformas fixas afastadas dela, para que não haja colisões entre plataformas durante o movimento.

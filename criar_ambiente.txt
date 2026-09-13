@@ -1,0 +1,110 @@
+---------------------------------------
+Criando o ambiente do jogo
+---------------------------------------
+
+Crie a pasta para o jogo.
+Dentro crie as pastas:
+- assets
+- src
+index.html
+
+Vamos criar o arquivo package.json. No terminal execute: 
+npm.cmd init -y
+
+Vamos instalar o Phaser. No terminal execute:
+npm.cmd install phaser
+
+Teremos as pastas:
+C:\Git\Phaser_games\meu-jogo\
+├── node_modules\
+├── package-lock.json
+└── package.json
+
+No arquivo index.html inclua:
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu primeiro jogo Phaser</title>
+</head>
+<body>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>
+
+Dentro da pasta src crie o arquivo: main.js
+Inclua o conteúdo:
+
+import Phaser from 'phaser';
+
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    backgroundColor: '#202040',
+    scene: {
+        create() {
+            this.add.text(250, 280, 'Olá, Phaser!', {
+                fontSize: '48px',
+                color: '#ffffff'
+            });
+        }
+    }
+};
+
+new Phaser.Game(config);
+
+C:\Git\Phaser_games\meu-jogo\
+├── node_modules\
+├── src\
+│   └── main.js
+├── index.html
+├── package-lock.json
+└── package.json
+
+Precisamos de um servidor local. Não abra o index.html diretamente com duplo clique, pois o navegador pode bloquear o carregamento do módulo.
+No terminal do VS Code, dentro de meu-jogo, execute:
+npm.cmd install --save-dev vite
+
+Depois abra o arquivo package.json e localize:
+"scripts": {
+}
+
+Substitua por:
+"scripts": {
+    "dev": "vite"
+}
+
+Inicie o jogo. No terminal, execute:
+npm.cmd run dev
+
+O terminal deverá mostrar um endereço parecido com:
+http://localhost:5173/
+
+Segure Ctrl e clique nesse endereço, ou copie-o para o navegador.
+Se tudo estiver correto, você verá uma tela escura com:
+
+Olá, Phaser!
+
+Esse será nosso primeiro jogo funcionando.
+
+Para parar o servidor, use:
+Ctrl + C
+
+Próximo passo:
+
+Agora podemos transformar o texto “Olá, Phaser!” em um pequeno jogo.
+Sugiro começar com algo simples, mas já interativo:
+Primeiro jogo: movimentar um personagem
+Um fundo colorido;
+Um personagem representado por um quadrado;
+Movimento com as setas do teclado;
+Limites para impedir que o personagem saia da tela;
+Depois, poderemos trocar o quadrado por uma imagem.
+
+
+
+
+
+

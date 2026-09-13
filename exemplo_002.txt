@@ -1,0 +1,558 @@
+Esse exemplo será ótimo para aprender gravidade, salto, plataformas e movimento horizontal. Vamos substituir o código atual por um pequeno jogo de plataformas.
+
+A ideia será:
+
+O quadrado sofre gravidade.
+Se não houver plataforma embaixo, ele cai.
+As setas esquerda/direita movimentam o quadrado.
+A tecla espaço faz o quadrado pular.
+O pulo só funciona quando ele está no chão ou sobre uma plataforma.
+O movimento diagonal faz sentido porque o jogador pode estar no ar enquanto se move para os lados.
+
+1. Substitua o conteúdo de src/main.js
+-------------------------------------------------------------------
+import Phaser from 'phaser';
+
+const config = {
+    type: Phaser.AUTO,
+
+    width: 800,
+    height: 600,
+
+    backgroundColor: '#202040',
+
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: {
+                y: 700
+            },
+            debug: false
+        }
+    },
+
+    scene: {
+        create,
+        update
+    }
+};
+
+let jogador;
+let plataformas;
+let teclas;
+
+const velocidade = 220;
+const forcaDoPulo = 450;
+
+function create() {
+    const largura = 800;
+    const altura = 600;
+
+    // Fundo
+    this.add.rectangle(
+        largura / 2,
+        altura / 2,
+        largura,
+        altura,
+        0x303050
+    );
+
+    // Grupo de plataformas físicas estáticas
+    plataformas = this.physics.add.staticGroup();
+
+    // Chão
+    criarPlataforma(this, 400, 570, 800, 60);
+
+    // Plataformas superiores
+    criarPlataforma(this, 180, 450, 220, 25);
+    criarPlataforma(this, 600, 350, 220, 25);
+    criarPlataforma(this, 300, 250, 180, 25);
+    criarPlataforma(this, 650, 170, 180, 25);
+
+    // Jogador
+    jogador = this.add.rectangle(
+        100,
+        500,
+        30,
+        30,
+        0x00aaff
+    );
+
+    // Adiciona física ao jogador
+    this.physics.add.existing(jogador);
+
+    // Colisão com as plataformas
+    this.physics.add.collider(jogador, plataformas);
+
+    // Teclas
+    teclas = this.input.keyboard.addKeys({
+        esquerda: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        direita: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        pulo: Phaser.Input.Keyboard.KeyCodes.SPACE
+    });
+
+    // Texto
+    this.add.text(
+        20,
+        20,
+        'Setas: movimentar   Espaço: pular',
+        {
+            fontSize: '20px',
+            color: '#ffffff'
+        }
+    );
+}
+
+function update() {
+    // Zera somente a velocidade horizontal.
+    // A gravidade continua atuando no eixo Y.
+    jogador.body.setVelocityX(0);
+
+    // Movimento para a esquerda
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    // Movimento para a direita
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    // Verifica se o jogador está apoiado em alguma plataforma
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    // Pulo
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+}
+
+function criarPlataforma(scene, x, y, largura, altura) {
+    const plataforma = scene.add.rectangle(
+        x,
+        y,
+        largura,
+        altura,
+        0x8844aa
+    );
+
+    plataforma.setStrokeStyle(3, 0xffffff);
+
+    // Corpo físico estático
+    scene.physics.add.existing(plataforma, true);
+
+    // Adiciona ao grupo
+    plataformas.add(plataforma);
+}
+
+new Phaser.Game(config);
+-------------------------------------------------------------------
+
+Gravidade
+
+Na configuração da física temos:
+gravity: { y: 700 }
+
+Isso faz o jogador ser puxado para baixo automaticamente.
+Quanto maior o valor, mais forte será a gravidade:
+y: 300 -> queda mais lenta.
+y: 1000 -> queda mais rápida.
+
+Plataformas
+
+As plataformas são criadas neste grupo:
+plataformas = this.physics.add.staticGroup();
+
+Depois criamos cada uma:
+criarPlataforma(this, 180, 450, 220, 25);
+
+Os valores representam:
+x       posição horizontal
+y       posição vertical
+220     largura
+25      altura
+
+No Phaser, quanto maior o y, mais para baixo fica o objeto.
+
+Movimento horizontal
+Agora zeramos apenas a velocidade no eixo X:
+jogador.body.setVelocityX(0);
+
+Isso é importante. Não devemos usar: 
+jogador.body.setVelocity(0);
+
+Porque esse comando zeraria também a velocidade vertical e poderia cancelar a gravidade e o pulo.
+
+Pulo
+
+O comando:
+jogador.body.setVelocityY(-forcaDoPulo);
+
+faz o quadrado subir.
+
+Como o eixo Y cresce para baixo:
+-450 → sobe
+450 → desce
+
+A gravidade depois faz o jogador voltar para baixo.
+
+Verificação se está no chão
+
+Esta parte verifica se o quadrado está apoiado:
+
+const estaNoChao =
+    jogador.body.blocked.down ||
+    jogador.body.touching.down;
+
+O operador || significa "ou".
+
+Então:
+
+blocked.down
+OU
+touching.down
+
+Se qualquer um dos dois for verdadeiro, o jogador pode pular.
+
+Por que usamos JustDown?
+Phaser.Input.Keyboard.JustDown(teclas.pulo)
+
+Isso detecta o instante em que a tecla foi pressionada.
+
+Assim, segurar a barra de espaço não faz o jogador pular repetidamente. Ele precisa pressionar novamente depois de aterrissar.
+
+3. Experimente alterar estes valores
+Velocidade horizontal
+const velocidade = 220;
+Força do pulo
+const forcaDoPulo = 450;
+
+Por exemplo:
+
+const velocidade = 300;
+const forcaDoPulo = 550;
+
+O jogador ficará mais rápido e conseguirá alcançar plataformas mais altas.
+
+Gravidade
+
+Na configuração:
+
+gravity: {
+    y: 700
+}
+
+Uma combinação interessante para testar:
+
+gravity: {
+    y: 900
+}
+
+com:
+
+const forcaDoPulo = 550;
+
+Se o pulo ficar muito baixo, aumente forcaDoPulo. Se o jogador parecer cair devagar demais, aumente a gravidade.
+
+---------------------
+OUTROS TESTES
+---------------------
+
+Podemos fazer o jogador sair por um lado e reaparecer pelo lado oposto, como em alguns jogos clássicos.
+
+No seu main.js, acrescente este trecho dentro da função update(), depois dos comandos de movimento:
+
+function update() {
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Saiu pela direita: reaparece pela esquerda
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    // Saiu pela esquerda: reaparece pela direita
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+}
+Como funciona
+
+A área do jogo tem largura 800, mas o quadrado tem largura 30.
+
+Por isso usamos valores um pouco além das bordas:
+
+if (jogador.x > 815)
+
+Quando o quadrado passa pela direita, ele reaparece à esquerda:
+
+jogador.x = -15;
+
+E o contrário:
+
+if (jogador.x < -15) {
+    jogador.x = 815;
+}
+Importante: queda pela parte de baixo
+
+Esse código resolve apenas as laterais. Se o jogador cair pela parte inferior da tela, ele continuará desaparecido.
+
+Podemos fazer ele reaparecer no alto também:
+
+if (jogador.y > 630) {
+    jogador.x = 100;
+    jogador.y = 100;
+}
+
+Assim, quando cair:
+
+volta para x = 100;
+
+volta para y = 100;
+
+reaparece no alto da tela.
+
+O update() completo ficaria assim:
+
+function update() {
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Teletransporte horizontal
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+
+    // Se cair pela parte inferior, reinicia a posição
+    if (jogador.y > 630) {
+        jogador.x = 100;
+        jogador.y = 100;
+    }
+}
+
+Uma observação: como as plataformas estão próximas das laterais, o jogador pode atravessar horizontalmente uma plataforma e reaparecer do outro lado. Isso é esperado nesse tipo de regra de “tela circular”.
+
+------------------------------
+PLATAFORMA MOVEL
+------------------------------
+
+Vamos criar uma plataforma móvel horizontal. O quadrado poderá pousar nela e será levado junto enquanto ela se movimenta.
+
+A ideia é:
+
+A plataforma se move para a esquerda e para a direita.
+
+Quando chega ao limite, muda de direção.
+
+O jogador colide com ela.
+
+Quando estiver apoiado nela, acompanhará seu movimento.
+
+1. Acrescente uma variável
+
+Junto das outras variáveis no início do arquivo:
+
+let jogador;
+let plataformas;
+let plataformaMovel;
+let teclas;
+2. Crie a plataforma móvel dentro de create()
+
+Depois de criar as plataformas fixas, acrescente:
+
+// Plataforma móvel
+plataformaMovel = this.add.rectangle(
+    400,
+    480,
+    180,
+    25,
+    0xffaa00
+);
+
+this.physics.add.existing(plataformaMovel);
+
+plataformaMovel.body.setAllowGravity(false);
+plataformaMovel.body.setImmovable(true);
+
+// Colisão do jogador com a plataforma móvel
+this.physics.add.collider(jogador, plataformaMovel);
+
+A plataforma será amarela para ficar diferente das plataformas fixas.
+
+Por que usamos estes comandos?
+plataformaMovel.body.setAllowGravity(false);
+
+Impede que a gravidade faça a plataforma cair.
+
+plataformaMovel.body.setImmovable(true);
+
+Faz a plataforma não ser empurrada facilmente pelo jogador durante a colisão.
+
+3. Faça a plataforma se movimentar
+
+Dentro da função update(), acrescente:
+
+// Movimento da plataforma móvel
+plataformaMovel.body.setVelocityX(100);
+
+// Ao chegar perto da direita, volta para a esquerda
+if (plataformaMovel.x > 700) {
+    plataformaMovel.body.setVelocityX(-100);
+}
+
+// Ao chegar perto da esquerda, volta para a direita
+if (plataformaMovel.x < 100) {
+    plataformaMovel.body.setVelocityX(100);
+}
+
+Mas há um detalhe importante: apenas isso pode não transportar perfeitamente o jogador. Para a plataforma levar o quadrado junto, vamos usar a velocidade da plataforma também no jogador quando ele estiver apoiado.
+
+4. Versão recomendada da função update()
+
+Substitua sua função update() por esta:
+
+function update() {
+    // Movimento horizontal do jogador
+    jogador.body.setVelocityX(0);
+
+    if (teclas.esquerda.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.direita.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    // Verifica se o jogador está apoiado
+    const estaNoChao =
+        jogador.body.blocked.down ||
+        jogador.body.touching.down;
+
+    // Pulo
+    if (
+        Phaser.Input.Keyboard.JustDown(teclas.pulo) &&
+        estaNoChao
+    ) {
+        jogador.body.setVelocityY(-forcaDoPulo);
+    }
+
+    // Movimento da plataforma móvel
+    plataformaMovel.body.setVelocityX(100);
+
+    if (plataformaMovel.x > 700) {
+        plataformaMovel.body.setVelocityX(-100);
+    }
+
+    if (plataformaMovel.x < 100) {
+        plataformaMovel.body.setVelocityX(100);
+    }
+
+    // Faz o jogador acompanhar a plataforma
+    if (
+        jogador.body.blocked.down &&
+        jogador.body.touching.down
+    ) {
+        const distanciaVertical =
+            Math.abs(jogador.y - plataformaMovel.y);
+
+        const distanciaHorizontal =
+            Math.abs(jogador.x - plataformaMovel.x);
+
+        if (
+            distanciaVertical < 40 &&
+            distanciaHorizontal < 110
+        ) {
+            jogador.x += plataformaMovel.body.velocity.x /
+                60;
+        }
+    }
+
+    // Teletransporte horizontal
+    if (jogador.x > 815) {
+        jogador.x = -15;
+    }
+
+    if (jogador.x < -15) {
+        jogador.x = 815;
+    }
+
+    // Reinicia se cair pela parte inferior
+    if (jogador.y > 630) {
+        jogador.x = 100;
+        jogador.y = 100;
+        jogador.body.setVelocity(0);
+    }
+}
+5. Ajuste a velocidade da plataforma
+
+Atualmente está:
+
+plataformaMovel.body.setVelocityX(100);
+
+Para ela se mover mais rápido:
+
+plataformaMovel.body.setVelocityX(180);
+
+Para mais devagar:
+
+plataformaMovel.body.setVelocityX(60);
+
+É melhor usar uma constante:
+
+const velocidadeDaPlataforma = 100;
+
+E então:
+
+plataformaMovel.body.setVelocityX(velocidadeDaPlataforma);
+
+Para o retorno:
+
+plataformaMovel.body.setVelocityX(-velocidadeDaPlataforma);
+Observação
+
+Esta primeira versão usa uma verificação simples para fazer o quadrado acompanhar a plataforma. Ela funciona como exercício, mas depois podemos melhorar usando o sistema de plataformas móveis do Arcade Physics para que o transporte seja mais natural, inclusive quando o jogador estiver exatamente sobre a plataforma.

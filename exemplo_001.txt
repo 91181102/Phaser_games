@@ -1,0 +1,169 @@
+A ideia será:
+
+Retângulo externo: área total do jogo.
+Retângulo interno: obstáculo, formando um “labirinto” simples.
+Quadrado azul: personagem.
+Setas ↑ ↓ ← → movimentam o quadrado.
+O quadrado não poderá sair da área externa nem atravessar o retângulo interno.
+
+1. Substitua o conteúdo de src/main.js
+Apague o conteúdo atual e cole este código completo:
+------------------------------------------------------------
+import Phaser from 'phaser';
+
+const config = {
+    type: Phaser.AUTO,
+
+    width: 800,
+    height: 600,
+
+    backgroundColor: '#202020',
+
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false
+        }
+    },
+
+    scene: {
+        create,
+        update
+    }
+};
+
+let jogador;
+let teclas;
+let paredes;
+
+const velocidade = 220;
+
+function create() {
+    const largura = 800;
+    const altura = 600;
+
+    // Fundo da área do jogo
+    this.add.rectangle(
+        largura / 2,
+        altura / 2,
+        760,
+        560,
+        0x303050
+    );
+
+    // Borda externa apenas visual
+    this.add.rectangle(
+        largura / 2,
+        altura / 2,
+        760,
+        560
+    ).setStrokeStyle(8, 0xffffff);
+
+    // Grupo de paredes físicas estáticas
+    paredes = this.physics.add.staticGroup();
+
+    // Paredes externas
+    criarParede(this, 400, 20, 760, 40);
+    criarParede(this, 400, 580, 760, 40);
+    criarParede(this, 20, 300, 40, 560);
+    criarParede(this, 780, 300, 40, 560);
+
+    // Paredes internas
+    criarParede(this, 400, 180, 420, 30);
+    criarParede(this, 400, 420, 420, 30);
+    criarParede(this, 200, 300, 30, 270);
+    criarParede(this, 600, 300, 30, 270);
+
+    // Jogador visual
+    jogador = this.add.rectangle(
+        100,
+        100,
+        30,
+        30,
+        0x00aaff
+    );
+
+    // Adiciona física ao jogador
+    this.physics.add.existing(jogador);
+
+    // Colisão entre jogador e paredes
+    this.physics.add.collider(jogador, paredes);
+
+    // Teclas direcionais
+    teclas = this.input.keyboard.createCursorKeys();
+
+    // Texto de instrução
+    this.add.text(
+        30,
+        35,
+        'Use as setas para movimentar o quadrado',
+        {
+            fontSize: '20px',
+            color: '#ffffff'
+        }
+    );
+}
+
+function update() {
+    jogador.body.setVelocity(0);
+
+    if (teclas.left.isDown) {
+        jogador.body.setVelocityX(-velocidade);
+    }
+
+    if (teclas.right.isDown) {
+        jogador.body.setVelocityX(velocidade);
+    }
+
+    if (teclas.up.isDown) {
+        jogador.body.setVelocityY(-velocidade);
+    }
+
+    if (teclas.down.isDown) {
+        jogador.body.setVelocityY(velocidade);
+    }
+}
+
+function criarParede(scene, x, y, largura, altura) {
+    // Cria a parede visual
+    const parede = scene.add.rectangle(
+        x,
+        y,
+        largura,
+        altura,
+        0x8844aa
+    );
+
+    parede.setStrokeStyle(3, 0xffffff);
+
+    // Converte o retângulo em corpo físico estático
+    scene.physics.add.existing(parede, true);
+
+    // Adiciona ao grupo de paredes
+    paredes.add(parede);
+}
+
+new Phaser.Game(config);
+
+----------------------------------------------------
+2. Salve o arquivo
+
+Pressione:
+Ctrl + S
+
+O Vite normalmente atualizará o jogo automaticamente no navegador.
+Se não atualizar, recarregue a página com:
+Ctrl + R
+
+3. O que você deverá ver
+
+Fundo azul-escuro;
+Uma moldura branca externa;
+Paredes roxas formando um retângulo interno;
+Um quadrado azul começando no canto superior esquerdo;
+Movimento pelas quatro direções.
+Observação sobre o labirinto
+
+Neste primeiro modelo, o retângulo interno tem aberturas nas laterais, permitindo que o quadrado passe por alguns pontos. Ele funciona como uma primeira versão do labirinto.
+Se quiser deixar o movimento mais parecido com um jogo de visão superior, o próximo ajuste será impedir o movimento diagonal quando duas teclas forem pressionadas ao mesmo tempo e criar corredores mais definidos.
+
